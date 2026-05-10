@@ -1,0 +1,55 @@
+# Dependencies
+/vendor
+/node_modules
+
+# Environment files
+.env
+.env.backup
+.env.production
+.env.local
+.env.testing
+
+# Laravel generated files
+/public/hot
+/public/storage
+/storage/*.key
+/storage/logs/*.log
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/framework/testing/*
+/bootstrap/cache/*.php
+
+# IDE / Editor
+.idea
+.vscode
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Testing / coverage
+/coverage
+.phpunit.result.cache
+
+# NPM / Yarn / Vite
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+/.vite
+
+# Composer
+composer.phar
+
+# Docker local files
+/docker/mysql/data
+*.pid
+
+# Swagger generated cache/docs if using L5 Swagger
+/storage/api-docs/*.json
+/storage/api-docs/*.yaml
+!/docs/openapi.yaml
+
+# OS files
+ehthumbs.db
+Desktop.ini

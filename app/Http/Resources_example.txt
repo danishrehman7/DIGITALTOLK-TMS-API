@@ -1,0 +1,2 @@
+Optional improvement:
+Create JsonResource classes if you want cleaner API formatting. For this assessment, direct JSON output is acceptable and faster to read.
