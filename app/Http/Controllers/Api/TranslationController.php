@@ -14,9 +14,7 @@ use Illuminate\Http\Request;
 
 class TranslationController extends Controller
 {
-    public function __construct(private readonly TranslationService $translationService)
-    {
-    }
+    public function __construct(private readonly TranslationService $translationService) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -51,21 +49,18 @@ class TranslationController extends Controller
         return response()->json(status: 204);
     }
 
-    public function export(Request $request, string $locale): JsonResponse
+    public function export(string $locale, Request $request): JsonResponse
     {
-        $tag = $request->query('tag');
-        $latestUpdate = $this->translationService->latestUpdateTimestamp($locale, $tag);
-        $etag = sha1($locale . '|' . $tag . '|' . $latestUpdate);
+        $translations = $this->translationService->export(
+            $locale,
+            $request->query('tag')
+        );
 
-        if ($request->headers->get('If-None-Match') === $etag) {
-            return response()->json(null, 304);
-        }
-
-        $translations = $this->translationService->export($locale, $tag);
+        $etag = md5(json_encode($translations));
 
         return response()
             ->json($translations)
-            ->setEtag($etag)
-            ->header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+            ->header('Cache-Control', 'public, max-age=60, stale-while-revalidate=300')
+            ->header('ETag', $etag);
     }
 }

@@ -87,36 +87,33 @@ class TranslationService
     /** @return array<string, string> */
     public function export(string $localeCode, ?string $tag = null): array
     {
-        $locale = Locale::query()
-            ->where('code', $localeCode)
-            ->firstOrFail();
+        $query = DB::table('translations')
+            ->join('locales', 'translations.locale_id', '=', 'locales.id')
+            ->join('translation_keys', 'translations.translation_key_id', '=', 'translation_keys.id')
+            ->where('locales.code', $localeCode)
+            ->select([
+                'translations.id as translation_id',
+                'translation_keys.key',
+                'translations.content',
+            ]);
 
-        $query = Translation::query()
-            ->select('translations.id', 'translations.translation_key_id', 'translations.content')
-            ->with(['translationKey:id,key'])
-            ->where('locale_id', $locale->id);
-
-        if ($tag) {
-            $query->whereHas('tags', function ($tagQuery) use ($tag) {
-                $tagQuery->where('name', $tag);
-            });
+        if ($tag !== null) {
+            $query->join('tag_translation', 'translations.id', '=', 'tag_translation.translation_id')
+                ->join('tags', 'tag_translation.tag_id', '=', 'tags.id')
+                ->where('tags.name', $tag);
         }
-
-        $translations = $query->get();
 
         $export = [];
 
-        foreach ($translations as $translation) {
-            Arr::set(
-                $export,
-                $translation->translationKey->key,
-                $translation->content
-            );
-        }
+        $query->orderBy('translations.id')
+            ->chunkById(1000, function ($translations) use (&$export): void {
+                foreach ($translations as $translation) {
+                    Arr::set($export, $translation->key, $translation->content);
+                }
+            }, 'translations.id', 'translation_id');
 
         return $export;
     }
-
 
     public function latestUpdateTimestamp(string $localeCode, ?string $tag = null): ?string
     {

@@ -6,7 +6,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     public function up(): void
     {
         Schema::create('locales', function (Blueprint $table): void {
@@ -31,7 +32,7 @@ return new class extends Migration {
             $table->timestamps();
 
             $table->unique(['locale_id', 'translation_key_id'], 'translations_locale_key_unique');
-            $table->index(['locale_id', 'updated_at'], 'translations_locale_updated_index');
+            $table->index(['locale_id', 'translation_key_id', 'updated_at'], 'translations_locale_updated_index');
             $table->fullText('content');
         });
 
@@ -44,7 +45,7 @@ return new class extends Migration {
         Schema::create('tag_translation', function (Blueprint $table): void {
             $table->foreignId('translation_id')->constrained()->cascadeOnDelete();
             $table->foreignId('tag_id')->constrained()->cascadeOnDelete();
-
+            $table->unique(['translation_id', 'tag_id']);
             $table->primary(['translation_id', 'tag_id']);
             $table->index(['tag_id', 'translation_id']);
         });

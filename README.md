@@ -27,10 +27,12 @@ The application supports:
 - Translation CRUD APIs
 - Search by locale, key, tag, or content
 - JSON export endpoint for frontend applications
-- Seeder/factory support for 100k+ records
+- Seeder/command support for generating 100k+ records
 - Docker environment for quick setup
+- MySQL and Redis services
 - OpenAPI/Swagger documentation
-- Unit and feature tests
+- Unit, feature, and performance-focused tests
+- CDN-friendly export response headers
 
 ---
 
@@ -44,6 +46,7 @@ The application supports:
 - Docker
 - Nginx
 - PHPUnit
+- Xdebug for coverage reports
 
 ---
 
@@ -51,12 +54,7 @@ The application supports:
 
 ### Translation Management
 
-Each translation belongs to:
-
-- A locale
-- A translation key
-- Translation content
-- Optional tags
+Each translation belongs to a locale, translation key, translation content, and optional context tags.
 
 Example request:
 
@@ -69,13 +67,9 @@ Example request:
 }
 ```
 
----
-
 ### Frontend JSON Export
 
 The export endpoint returns translations as nested JSON.
-
-Example endpoint:
 
 ```text
 GET /api/translations/export/en
@@ -95,9 +89,12 @@ Example response:
 }
 ```
 
-This structure is easy to use in frontend i18n systems.
+The export endpoint also returns CDN-friendly headers:
 
----
+```text
+Cache-Control
+ETag
+```
 
 ### Authentication
 
@@ -122,9 +119,7 @@ The database uses a normalized schema:
 - `tags`
 - `tag_translation`
 
-This design avoids duplicated locale/key/tag data and allows future scalability.
-
-Common lookup columns are indexed for better performance.
+This avoids duplicated locale/key/tag data and supports future scalability. Common lookup columns are indexed for better query performance.
 
 ---
 
@@ -159,9 +154,7 @@ This project includes Docker so reviewers can run the application without manual
 - Docker Desktop
 - Docker Compose
 
----
-
-## Quick Start with Docker
+### Quick Start with Docker
 
 Clone the repository:
 
@@ -220,19 +213,39 @@ http://127.0.0.1:8000
 
 ---
 
-## Run Tests
+## Docker Environment Services
 
-Run all tests:
+| Service | Description |
+|---|---|
+| `app` | PHP 8.3 FPM Laravel application |
+| `nginx` | Web server exposed on port `8000` |
+| `mysql` | MySQL 8 database |
+| `redis` | Redis service for cache-ready setup |
 
-```bash
-docker compose exec app php artisan test
+---
+
+## Environment Configuration
+
+For Docker, `.env` should use:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=digitaltolk
+DB_USERNAME=digitaltolk
+DB_PASSWORD=secret
+
+CACHE_STORE=redis
+QUEUE_CONNECTION=sync
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=redis
+REDIS_PASSWORD=null
+REDIS_PORT=6379
 ```
 
-Run only translation tests:
-
-```bash
-docker compose exec app php artisan test --filter=Translation
-```
+Inside Docker, `DB_HOST` must be `mysql`, not `localhost` or `127.0.0.1`.
 
 ---
 
@@ -258,9 +271,7 @@ $token = $user->createToken('api-token')->plainTextToken;
 $token;
 ```
 
-Copy the generated token.
-
-Use it in API requests as:
+Copy the generated token and use it in API requests:
 
 ```text
 Authorization: Bearer YOUR_TOKEN
@@ -328,21 +339,76 @@ In Swagger UI:
 1. Click **Authorize**
 2. Paste only the token
 3. Do not manually write `Bearer`
-4. Execute the API requests
+4. Execute API requests
 
 ---
 
-## Seeder for Scalability Testing
+## Run Tests
 
-The project includes seeders/factories to generate large translation datasets.
-
-To reset and seed the database:
+Run all tests normally:
 
 ```bash
-docker compose exec app php artisan migrate:fresh --seed
+docker compose exec -e XDEBUG_MODE=off app php artisan test
 ```
 
-The seeder can be configured to generate 100k+ translation records for scalability testing.
+Run only translation tests:
+
+```bash
+docker compose exec -e XDEBUG_MODE=off app php artisan test --filter=Translation
+```
+
+Run coverage report:
+
+```bash
+docker compose exec -e XDEBUG_MODE=coverage app php artisan test --coverage
+```
+
+Performance timing should be measured with `XDEBUG_MODE=off`. Xdebug coverage mode slows PHP execution, so timing-based performance tests should not be judged while coverage is active.
+
+---
+
+## Performance and Scalability Testing
+
+The application includes performance-focused tests for:
+
+- Translation listing response time
+- JSON export response time
+- Authenticated API access
+- Search and filtering
+
+Run performance tests without Xdebug coverage:
+
+```bash
+docker compose exec -e XDEBUG_MODE=off app php artisan test --filter=TranslationPerformanceTest
+```
+
+---
+
+## Large Dataset Seeding
+
+Generate 100k translation records:
+
+```bash
+docker compose exec app php artisan translations:seed-large 100000
+```
+
+Generate a custom amount:
+
+```bash
+docker compose exec app php artisan translations:seed-large 250000
+```
+
+This command is intended for scalability and performance testing. It uses batch inserts to avoid unnecessary memory usage.
+
+---
+
+## Export Benchmark
+
+Run benchmark without Xdebug coverage:
+
+```bash
+docker compose exec -e XDEBUG_MODE=off app php artisan translations:benchmark-export en
+```
 
 ---
 
@@ -353,15 +419,28 @@ The project was designed with performance in mind:
 - Normalized database schema
 - Indexed lookup columns
 - Paginated listing endpoint
-- Efficient Eloquent relationships
-- Optimized export query
+- Query-builder based export for reduced Eloquent overhead
+- Chunked export processing for larger datasets
+- Efficient relationship loading where needed
 - Redis-ready Docker environment
-- CDN-friendly response headers
-- JSON export endpoint with `Cache-Control` and `ETag` headers
+- CDN-friendly `Cache-Control` and `ETag` headers
+- JSON export endpoint suitable for frontend caching
 
 ---
 
 ## Useful Docker Commands
+
+Start containers:
+
+```bash
+docker compose up -d
+```
+
+Build and start containers:
+
+```bash
+docker compose up -d --build
+```
 
 Stop containers:
 
@@ -387,10 +466,10 @@ View Nginx logs:
 docker compose logs -f nginx
 ```
 
-Rebuild containers:
+View MySQL logs:
 
 ```bash
-docker compose up -d --build
+docker compose logs -f mysql
 ```
 
 Run migrations again:
@@ -399,10 +478,16 @@ Run migrations again:
 docker compose exec app php artisan migrate:fresh --seed
 ```
 
+Clear cache:
+
+```bash
+docker compose exec app php artisan optimize:clear
+```
+
 Run tests:
 
 ```bash
-docker compose exec app php artisan test
+docker compose exec -e XDEBUG_MODE=off app php artisan test
 ```
 
 ---
@@ -460,6 +545,22 @@ php artisan test
 
 ---
 
+## Code Quality
+
+Run Laravel Pint for PSR-12 formatting:
+
+```bash
+docker compose exec app ./vendor/bin/pint
+```
+
+Or locally:
+
+```bash
+vendor/bin/pint
+```
+
+---
+
 ## Design Choices
 
 ### Normalized Database Schema
@@ -478,16 +579,17 @@ Validation is handled through dedicated request classes for clean and reusable v
 
 Laravel Sanctum is used for secure token-based API access.
 
+### Query Builder Export
+
+The translation export logic uses optimized SQL joins through Laravel's query builder to reduce model hydration overhead and improve performance for larger exports.
+
+### Chunked Export Processing
+
+The export process uses chunked processing to avoid loading very large datasets into memory all at once.
+
 ### Nested JSON Export
 
-Translation keys such as:
-
-```text
-home.title
-button.submit
-```
-
-are exported as nested JSON:
+Translation keys such as `home.title` and `button.submit` are exported as nested JSON:
 
 ```json
 {
@@ -500,7 +602,9 @@ are exported as nested JSON:
 }
 ```
 
-This is easier for frontend applications to consume.
+### CDN-Friendly Headers
+
+The export endpoint returns `Cache-Control` and `ETag` headers so it can be integrated with CDN/proxy caching strategies.
 
 ---
 
@@ -516,10 +620,36 @@ The project includes tests for:
 - Export endpoint performance
 - Translation service logic
 
-Run tests with:
+Run coverage report with:
 
 ```bash
-docker compose exec app php artisan test
+docker compose exec -e XDEBUG_MODE=coverage app php artisan test --coverage
+```
+
+---
+
+## Reviewer Quick Commands
+
+For a clean Docker setup and test run:
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate:fresh --seed
+docker compose exec -e XDEBUG_MODE=off app php artisan test
+```
+
+For Windows CMD:
+
+```cmd
+copy .env.example .env
+docker compose up -d --build
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate:fresh --seed
+docker compose exec -e XDEBUG_MODE=off app php artisan test
 ```
 
 ---
@@ -538,3 +668,4 @@ The implementation focuses on:
 - Docker-based setup
 - Testable service-oriented code
 - Performance-minded API responses
+- OpenAPI documentation

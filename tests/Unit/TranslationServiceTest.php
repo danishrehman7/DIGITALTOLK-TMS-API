@@ -49,7 +49,7 @@ class TranslationServiceTest extends TestCase
                 'button' => [
                     'submit' => 'Enviar',
                 ],
-            ], 
+            ],
             $export
         );
     }

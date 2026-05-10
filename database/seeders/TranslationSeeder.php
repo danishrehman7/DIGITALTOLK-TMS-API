@@ -40,7 +40,7 @@ class TranslationSeeder extends Seeder
 
         TranslationKey::query()
             ->select(['id', 'key'])
-            ->chunkById(1000, function ($keys) use ($locales, $tags, $now): void {
+            ->chunkById(1000, function ($keys) use ($locales, $now): void {
                 $translations = [];
 
                 foreach ($keys as $key) {
