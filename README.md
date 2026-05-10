@@ -1,100 +1,64 @@
-# DigitalTolk Translation Management API - Laravel Implementation
+# DigitalTolk Translation Management API
 
-A Laravel API-driven Translation Management Service built for the DigitalTolk senior developer code test.
+A Laravel-based API-driven Translation Management Service built for the DigitalTolk Senior Laravel Developer code test.
 
-## Features
+This project provides a scalable API for storing, managing, searching, tagging, and exporting translations for frontend applications such as Vue.js, React, and mobile apps.
 
+---
+
+## Repository
+
+```text
+https://github.com/danishrehman7/DIGITALTOLK-TMS-API
+```
+
+---
+
+## Project Overview
+
+The goal of this project is to build a translation management service with clean Laravel architecture, secure API authentication, scalable database design, optimized queries, and Docker-based setup for easy review.
+
+The application supports:
+
+- Multiple locales such as `en`, `fr`, `es`
+- Dynamic translation keys such as `home.title`, `button.submit`
+- Context tags such as `web`, `mobile`, `desktop`
 - Token-based API authentication using Laravel Sanctum
-- Store translations for unlimited locales: `en`, `fr`, `es`, etc.
-- Tag translations by context: `mobile`, `desktop`, `web`, etc.
-- Create, update, view, delete, and search translations
-- Search by translation key, locale, content, and tags
-- Fast JSON export endpoint for frontend apps such as Vue.js
-- Optimized database indexes for large datasets
+- Translation CRUD APIs
+- Search by locale, key, tag, or content
+- JSON export endpoint for frontend applications
 - Seeder/factory support for 100k+ records
-- Docker setup
-- OpenAPI documentation
-- Unit, feature, and basic performance tests
+- Docker environment for quick setup
+- OpenAPI/Swagger documentation
+- Unit and feature tests
 
-## Quick Setup
+---
 
-```bash
-composer create-project laravel/laravel digitaltolk-translation-api
-cd digitaltolk-translation-api
-```
+## Tech Stack
 
-Copy the files from this package into the Laravel project.
+- PHP 8.3
+- Laravel 11
+- MySQL 8
+- Redis
+- Laravel Sanctum
+- Docker
+- Nginx
+- PHPUnit
 
-Install Sanctum if your Laravel project does not already include it:
+---
 
-```bash
-composer require laravel/sanctum
-php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
-```
+## Main Features
 
-Configure `.env`:
+### Translation Management
 
-```env
-APP_NAME="DigitalTolk Translation API"
-APP_ENV=local
-APP_DEBUG=true
-APP_URL=http://localhost:8000
+Each translation belongs to:
 
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=digitaltolk_translations
-DB_USERNAME=root
-DB_PASSWORD=password
+- A locale
+- A translation key
+- Translation content
+- Optional tags
 
-CACHE_STORE=redis
-QUEUE_CONNECTION=sync
-SESSION_DRIVER=file
-```
-
-Run migrations and seed data:
-
-```bash
-php artisan migrate
-php artisan db:seed --class=TranslationSeeder
-```
-
-Create a test user/token:
-
-```bash
-php artisan tinker
-```
-
-```php
-$user = \App\Models\User::factory()->create(['email' => 'admin@example.com']);
-$token = $user->createToken('api-token')->plainTextToken;
-echo $token;
-```
-
-Run the API:
-
-```bash
-php artisan serve
-```
-
-Use this header for protected routes:
-
-```http
-Authorization: Bearer YOUR_TOKEN
-Accept: application/json
-```
-
-## API Endpoints
-
-### Authentication
-
-Sanctum token is used for API protection. Generate a token with Tinker or implement a login endpoint if required.
-
-### Create Translation
-
-```http
-POST /api/translations
-```
+Example request:
 
 ```json
 {
@@ -105,110 +69,472 @@ POST /api/translations
 }
 ```
 
-### Update Translation
+---
 
-```http
-PUT /api/translations/{translation}
-```
+### Frontend JSON Export
 
-```json
-{
-  "content": "Welcome to our website",
-  "tags": ["web", "mobile"]
-}
-```
+The export endpoint returns translations as nested JSON.
 
-### View Translation
+Example endpoint:
 
-```http
-GET /api/translations/{translation}
-```
-
-### Search Translations
-
-```http
-GET /api/translations?locale=en&key=home&content=welcome&tag=web
-```
-
-### Export JSON
-
-```http
+```text
 GET /api/translations/export/en
 ```
 
-Response:
+Example response:
 
 ```json
 {
-  "home.title": "Welcome Home",
-  "home.subtitle": "Fast translation service"
+  "home": {
+    "title": "Welcome Home",
+    "subtitle": "Fast Translation API"
+  },
+  "button": {
+    "submit": "Submit"
+  }
 }
 ```
 
-Optional tag filter:
+This structure is easy to use in frontend i18n systems.
 
-```http
-GET /api/translations/export/en?tag=web
+---
+
+### Authentication
+
+The API is protected using Laravel Sanctum.
+
+Protected endpoints require:
+
+```text
+Authorization: Bearer YOUR_TOKEN
+Accept: application/json
 ```
 
-## Design Choices
+---
 
-### Database Schema
+## Database Design
 
-The schema uses normalized tables:
+The database uses a normalized schema:
 
-- `locales`: stores language codes.
-- `translation_keys`: stores reusable translation keys.
-- `translations`: stores translated content for each key and locale.
-- `tags`: stores context tags.
-- `tag_translation`: pivot table for many-to-many translation tags.
+- `locales`
+- `translation_keys`
+- `translations`
+- `tags`
+- `tag_translation`
 
-This avoids duplicated keys/locales and keeps filtering scalable.
+This design avoids duplicated locale/key/tag data and allows future scalability.
 
-### Performance Choices
+Common lookup columns are indexed for better performance.
 
-- Unique indexes on locale codes, translation keys, and `(locale_id, translation_key_id)`.
-- Full-text index on translation content for faster content search.
-- Composite index on export-critical columns.
-- Export endpoint uses `pluck()` instead of loading full Eloquent models.
-- Export responses include cache-friendly headers and ETag support.
-- For production, place CDN/proxy cache in front of export endpoint.
+---
 
-### CDN Support
+## API Endpoints
 
-The export endpoint returns:
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/translations` | List and search translations |
+| POST | `/api/translations` | Create a translation |
+| GET | `/api/translations/{id}` | View a translation |
+| PUT/PATCH | `/api/translations/{id}` | Update a translation |
+| DELETE | `/api/translations/{id}` | Delete a translation |
+| GET | `/api/translations/export/{locale}` | Export translations for a locale |
 
-```http
-Cache-Control: public, max-age=60, stale-while-revalidate=300
-ETag: generated_hash
+### Search Examples
+
+```text
+/api/translations?locale=en
+/api/translations?key=home.title
+/api/translations?tag=web
+/api/translations?content=Welcome
 ```
 
-Because the endpoint must always return updated translations whenever requested, the ETag is based on the locale plus latest `updated_at` value. Clients/CDNs can revalidate quickly.
+---
 
-## Docker
+## Docker Setup
+
+This project includes Docker so reviewers can run the application without manually installing PHP, MySQL, Redis, or Nginx.
+
+### Requirements
+
+- Docker Desktop
+- Docker Compose
+
+---
+
+## Quick Start with Docker
+
+Clone the repository:
+
+```bash
+git clone https://github.com/danishrehman7/DIGITALTOLK-TMS-API.git
+cd DIGITALTOLK-TMS-API
+```
+
+Create the environment file:
+
+```bash
+cp .env.example .env
+```
+
+For Windows CMD:
+
+```cmd
+copy .env.example .env
+```
+
+Build and start containers:
 
 ```bash
 docker compose up -d --build
 ```
 
-Then run:
+Install Composer dependencies inside the container:
 
 ```bash
-docker compose exec app php artisan migrate --seed
+docker compose exec app composer install
 ```
 
-## Tests
+Generate Laravel application key:
+
+```bash
+docker compose exec app php artisan key:generate
+```
+
+Run database migrations and seeders:
+
+```bash
+docker compose exec app php artisan migrate:fresh --seed
+```
+
+Clear Laravel cache:
+
+```bash
+docker compose exec app php artisan optimize:clear
+```
+
+The application will be available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+---
+
+## Run Tests
+
+Run all tests:
+
+```bash
+docker compose exec app php artisan test
+```
+
+Run only translation tests:
+
+```bash
+docker compose exec app php artisan test --filter=Translation
+```
+
+---
+
+## Generate API Token
+
+Open Laravel Tinker:
+
+```bash
+docker compose exec app php artisan tinker
+```
+
+Create a reviewer user and token:
+
+```php
+$user = \App\Models\User::factory()->create([
+    'name' => 'Reviewer',
+    'email' => 'reviewer@example.com',
+    'password' => bcrypt('password'),
+]);
+
+$token = $user->createToken('api-token')->plainTextToken;
+
+$token;
+```
+
+Copy the generated token.
+
+Use it in API requests as:
+
+```text
+Authorization: Bearer YOUR_TOKEN
+Accept: application/json
+```
+
+---
+
+## Example API Requests
+
+Replace `YOUR_TOKEN` with the generated Sanctum token.
+
+### Create Translation
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/translations" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"locale":"en","key":"home.title","content":"Welcome Home","tags":["web","desktop"]}'
+```
+
+### List Translations
+
+```bash
+curl -X GET "http://127.0.0.1:8000/api/translations" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Search by Tag
+
+```bash
+curl -X GET "http://127.0.0.1:8000/api/translations?tag=web" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Export Locale JSON
+
+```bash
+curl -X GET "http://127.0.0.1:8000/api/translations/export/en" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
+
+## OpenAPI / Swagger Documentation
+
+OpenAPI documentation is available at:
+
+```text
+docs/openapi.yaml
+```
+
+If Swagger UI is installed, it can be accessed at:
+
+```text
+http://127.0.0.1:8000/api/documentation
+```
+
+In Swagger UI:
+
+1. Click **Authorize**
+2. Paste only the token
+3. Do not manually write `Bearer`
+4. Execute the API requests
+
+---
+
+## Seeder for Scalability Testing
+
+The project includes seeders/factories to generate large translation datasets.
+
+To reset and seed the database:
+
+```bash
+docker compose exec app php artisan migrate:fresh --seed
+```
+
+The seeder can be configured to generate 100k+ translation records for scalability testing.
+
+---
+
+## Performance Considerations
+
+The project was designed with performance in mind:
+
+- Normalized database schema
+- Indexed lookup columns
+- Paginated listing endpoint
+- Efficient Eloquent relationships
+- Optimized export query
+- Redis-ready Docker environment
+- CDN-friendly response headers
+- JSON export endpoint with `Cache-Control` and `ETag` headers
+
+---
+
+## Useful Docker Commands
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Stop containers and remove database volume:
+
+```bash
+docker compose down -v
+```
+
+View app logs:
+
+```bash
+docker compose logs -f app
+```
+
+View Nginx logs:
+
+```bash
+docker compose logs -f nginx
+```
+
+Rebuild containers:
+
+```bash
+docker compose up -d --build
+```
+
+Run migrations again:
+
+```bash
+docker compose exec app php artisan migrate:fresh --seed
+```
+
+Run tests:
+
+```bash
+docker compose exec app php artisan test
+```
+
+---
+
+## Local Setup Without Docker
+
+Requirements:
+
+- PHP 8.2 or higher
+- Composer
+- MySQL 8
+- Redis optional
+
+Install dependencies:
+
+```bash
+composer install
+```
+
+Copy environment file:
+
+```bash
+cp .env.example .env
+```
+
+For Windows CMD:
+
+```cmd
+copy .env.example .env
+```
+
+Generate app key:
+
+```bash
+php artisan key:generate
+```
+
+Configure your `.env` database values, then run:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+Start local server:
+
+```bash
+php artisan serve
+```
+
+Run tests:
 
 ```bash
 php artisan test
 ```
 
-For coverage:
+---
 
-```bash
-php artisan test --coverage
+## Design Choices
+
+### Normalized Database Schema
+
+Locales, translation keys, and tags are stored separately to avoid duplication and support future scalability.
+
+### Service Layer
+
+Translation business logic is handled in a service class instead of placing all logic inside controllers. This keeps controllers clean and makes the code easier to test.
+
+### Form Request Validation
+
+Validation is handled through dedicated request classes for clean and reusable validation logic.
+
+### Sanctum Authentication
+
+Laravel Sanctum is used for secure token-based API access.
+
+### Nested JSON Export
+
+Translation keys such as:
+
+```text
+home.title
+button.submit
 ```
 
-## Notes
+are exported as nested JSON:
 
-This implementation is designed to satisfy the assessment requirements while keeping code clean, testable, scalable, and easy to explain in an interview.
+```json
+{
+  "home": {
+    "title": "Welcome Home"
+  },
+  "button": {
+    "submit": "Submit"
+  }
+}
+```
+
+This is easier for frontend applications to consume.
+
+---
+
+## Test Coverage
+
+The project includes tests for:
+
+- Translation creation
+- Guest authentication protection
+- Search by tag
+- Locale JSON export
+- Translation update
+- Export endpoint performance
+- Translation service logic
+
+Run tests with:
+
+```bash
+docker compose exec app php artisan test
+```
+
+---
+
+## Notes for Reviewer
+
+This project was built for the DigitalTolk Laravel Senior Developer code test.
+
+The implementation focuses on:
+
+- Clean Laravel architecture
+- API-first design
+- Secure token authentication
+- Scalable database schema
+- Search and export functionality
+- Docker-based setup
+- Testable service-oriented code
+- Performance-minded API responses
